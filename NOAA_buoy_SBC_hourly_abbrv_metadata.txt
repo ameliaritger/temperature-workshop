@@ -1,0 +1,45 @@
+east santa barbara channel : 46053
+https://www.ndbc.noaa.gov/station_page.php?station=46053
+
+Owned and maintained by National Data Buoy Center
+3-meter foam buoy w/ seal cage
+SCOOP payload
+34.234 N 119.834 W (34°14'4" N 119°50'3" W)
+
+Site elevation: sea level
+Air temp height: 3.7 m above site elevation
+Anemometer height: 4.1 m above site elevation
+Barometer elevation: 2.7 m above mean sea level
+Sea temp depth: 1.5 m below water line
+Water depth: 405 m
+Watch circle radius: 678 yards
+
+
+west santa barbara channel : 46054
+https://www.ndbc.noaa.gov/station_page.php?station=46054
+
+Owned and maintained by National Data Buoy Center
+3-meter discus buoy w/ seal cage
+SCOOP payload
+34.265 N 120.477 W (34°15'53" N 120°28'37" W)
+
+Site elevation: sea level
+Air temp height: 3.4 m above site elevation
+Anemometer height: 3.8 m above site elevation
+Barometer elevation: 2.4 m above mean sea level
+Sea temp depth: 2 m below water line
+Water depth: 454.2 m
+Watch circle radius: 780 yards
+
+
+
+Standard Meteorological Data
+"year" "month" "day" "hour" "wspeed" "wdir" "water_temp" "wvht" "wvdpd" "wvapd"      "buoy"
+wspeed	Wind speed (m/s) averaged over an eight-minute period for buoys and a two-minute 	period for land stations. Reported Hourly. See Wind Averaging Methods.
+wdir	Wind direction (the direction the wind is coming from in degrees clockwise from 	true N) during the same period used for WSPD. See Wind Averaging Methods
+water_temp Sea surface temperature (Celsius). For buoys the depth is referenced to 	the hull's waterline. For fixed platforms it varies with tide, but is referenced 	to, or near Mean Lower Low Water (MLLW).
+wvht	Significant wave height (meters) is calculated as the average of the highest one-	third of all of the wave heights during the 20-minute sampling period.
+wvdpd	Dominant wave period (seconds) is the period with the maximum wave energy.
+wvapd	Average wave period (seconds) of all waves during the 20-minute period.
+
+
