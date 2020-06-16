@@ -1,0 +1,41 @@
+---
+title: "TempDataWorkshop"
+author: "Terra Dressler"
+date: "June 16, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Load Packages
+```{r}
+library(tidyverse)
+library(here)
+```
+
+2. Load Data
+
+```{r}
+data <- read_csv(here("sea-surface-temp","NOAA_buoy_SBC_hourly_abbrv.csv"))
+                 
+```
+
+3. Basic Visualization: Graphing mean daily, min daily, and max daily temperatures over time
+
+```{r}
+data_daily <- data %>% 
+  group_by(year, month, day) %>% 
+  summarize(Mean_Daily = mean(water_temp), Min_Daily = min(water_temp), Max_Daily = max(water_temp)) %>% 
+  mutate(Range_Daily = Max_Daily - Min_Daily) %>% 
+  na.omit()
+
+view(data_daily)
+
+data_daily_plot <- 
+  
+```
+
+
+
