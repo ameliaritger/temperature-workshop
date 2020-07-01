@@ -18,5 +18,5 @@ For Spring 2020 temperature data imaging workshop organized by Emily Hardison an
 ### Analysis Descriptions
 
 creator | file path & name | description 
----|---|-----------
+---|-----|-----------
 [@samanthacsik](https://github.com/samanthacsik) | /bottom-temp/sam_csik/Csik_LTER_temp_working_group.Rmd | import & wrangle Moored CTD & ADCP data; create density ridge plots of bottom temps from various LTER sites
