@@ -1,0 +1,240 @@
+---
+title: "Untitled"
+author: "Amelia Ritger"
+date: "6/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##############################
+# import packages
+##############################
+```{r}
+library(tidyverse) # data wrangling & vizn
+library(here) # for reproducibility!
+library(chron) # working with times/dates
+library(lubridate) # working with times/dates
+library(naniar) # working with missing data
+library(ggridges) # makes pretty geom_ridge plots
+
+#For ts stuff:
+library(tsibble)
+library(fable)
+library(fabletools)
+library(feasts)
+library(forecast)
+```
+
+# metadata - this is a simple csv I built with the file names and associated information; it'll make importing/wrangling all the files in one step a bit easier in Part 1
+```{r}
+metadata <- read_csv(here("bottom-temp", "csv", "lter-file-names.csv"))
+```
+
+# this function imports each of the 5 files, cleans up the data and keeps only the required variables (there are way too many columns to deal with otherwise)
+```{r}
+import_temp_files <- function(file_name_csv, site){
+  read_csv(here::here("bottom-temp", "csv", file_name_csv), col_names = TRUE, col_types = cols(.default = col_character())) %>% 
+  select(year, month, day, decimal_time, Temp_bot, Temp_top, Temp_mid) %>% 
+  unite(date, year, month, day, sep = "-", remove = FALSE) %>% 
+  mutate(time = times(as.numeric(decimal_time))) %>% 
+  unite(date_time, date, time, sep = " ") %>% 
+  select(date_time, year, month, day, Temp_bot, Temp_top, Temp_mid) %>% 
+  mutate(date_time = as.POSIXct(date_time, "%Y-%m-%d %H:%M:%S", tz = "GMT"),
+         year = as.factor(year),
+         month = as.factor(month),
+         day = as.numeric(day),
+         Temp_top = as.numeric(Temp_top), 
+         Temp_mid = as.numeric(Temp_mid), 
+         Temp_bot = as.numeric(Temp_bot),
+         site = rep(site)) %>% 
+  replace_with_na(replace = list(Temp_bot = 9999)) %>% 
+  replace_with_na(replace = list(Temp_top = 9999)) %>% 
+  replace_with_na(replace = list(Temp_mid = 9999))
+}
+```
+
+# initialize empty df to fill with cleaned data
+```{r}
+temp_data <- data.frame(date_time = as.Date(character()),
+                        year = factor(),
+                        month = factor(),
+                        day = numeric(),
+                        site = as.character(),
+                        Temp_bot = numeric(),
+                        Temp_top = numeric(), 
+                        Temp_mid = numeric())
+```
+
+# for loop reads in/wrangles all files using the import_temp_files() function above
+```{r}
+for (row in 1:nrow(metadata)) {
+  data_row <- metadata[row,]
+  file_name_csv <- paste(as.character(data_row[, 1]),".csv", sep="")
+  print(file_name_csv)
+  site <- as.character(data_row[,2])
+  print(site)
+  table <- import_temp_files(file_name_csv, site) 
+  temp_data <- rbind(temp_data, table)
+}
+```
+
+# Save this combinded df as a csv file to work with in other scripts/to avoid having to run the for loop over and over again
+```{r}
+write.csv(temp_data, here("bottom-temp", "amelia", "all_bottom_temps_2005_2020.csv"), row.names = FALSE)
+```
+
+## Sam's plots
+```{r}
+ggplot(temp_data, aes(x = date_time, y = Temp_bot)) +
+  geom_line() +
+  geom_hline(yintercept = 11, linetype = "dashed", color = "red") +
+  geom_hline(yintercept = 16, linetype = "dashed", color = "red") +
+  geom_hline(yintercept = 21, linetype = "dashed", color = "red") +
+  facet_wrap(~site, ncol = 1) +
+  theme_classic() +
+  theme(axis.text = element_text(color = "black", size = 12),
+        axis.title = element_text(size = 13),
+        plot.title = element_text(size = 20, face = "bold"),
+        panel.border = element_rect(colour = "black", fil = NA, size = 0.7),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(size = 12),
+        legend.position = "none") 
+```
+
+```{r}
+##############################
+# filter out years that don't have data for some sites, add month abbreviations and set factor levels
+##############################
+
+cleaned_temp_data <- temp_data %>% 
+  filter(!year %in% c("1999", "2000", "2001", "2002", "2003", "2004")) %>% # remove years that we don't have good data for
+  mutate(month = as.factor(month), # there's prob a shortcut for this but I was too lazy to figure it out
+         month_name = case_when(
+            month == "1" ~ "Jan",
+            month == "2" ~ "Feb",
+            month == "3" ~ "Mar",
+            month == "4" ~ "Apr",
+            month == "5" ~ "May",
+            month == "6" ~ "Jun",
+            month == "7" ~ "Jul",
+            month == "8" ~ "Aug",
+            month == "9" ~ "Sep",
+            month == "10" ~ "Oct",
+            month == "11" ~ "Nov",
+            month == "12" ~ "Dec"
+        )
+      ) %>% 
+  mutate(month_name = fct_relevel(month_name, "Dec", "Nov", "Oct", "Sep", "Aug", # get months in correct order
+                                  "Jul", "Jun", "May", "Apr", "Mar", "Feb", "Jan")) %>% 
+  group_by(month_name)
+
+##############################
+# identify all unique sites to plot
+##############################
+
+unique_sites <- unique(temp_data$site)
+
+##############################
+# plot density ridges for all sites
+##############################
+
+# pdf(paste("lter_bottom_temp_densityridges_plot", Sys.Date(),".pdf", sep = "_"), onefile = TRUE, width = 10, height = 8)
+
+for(i in 1:length(unique_sites)) {
+  
+  lter_site <- unique_sites[i]
+  
+  print(lter_site)
+  
+  subset <- cleaned_temp_data %>% 
+    filter(site == lter_site)
+   
+  densityridges_plot <- ggplot(subset, aes(x = Temp_bot, y = month_name, fill = ..x..)) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+  geom_vline(xintercept = 11, linetype = "dashed", color = "darkgray") +
+  geom_vline(xintercept = 16, linetype = "dashed", color = "darkgray") +
+  geom_vline(xintercept = 21, linetype = "dashed", color = "darkgray") +
+  scale_fill_gradientn(colors = c("steelblue4", "lightblue", "lightslategray", "lightcoral", "indianred4"), name = "Temperature (°C)") +
+  scale_x_continuous(breaks = seq(9, 26, by = 2)) +
+  labs(x = "Bottom Temperature (°C)", y = "Month", title = lter_site) +
+  theme_classic() +
+  theme(axis.text = element_text(color = "black", size = 12),
+        axis.title = element_text(size = 13),
+        panel.border = element_rect(colour = "black", fil = NA, size = 0.7),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(size = 12)) 
+
+  plot(densityridges_plot)
+  
+}
+```
+
+
+
+#Get average temperature for each date
+```{r}
+temp_avg <- temp_data %>% 
+  mutate(date = date(date_time),
+         mo_yr = yearmonth(date),
+         mo = month(mo_yr, label = TRUE)) %>% 
+  group_by(date, year, mo, site) %>% 
+  summarize(temp_avg = mean(Temp_bot)) %>% 
+  ungroup()
+
+ggplot(data=temp_nap, aes(x=date, y=temp_avg, color=site)) +
+  geom_line() +
+  #facet_wrap(~site)
+
+
+ggplot(data=temp_avg, aes(x=mo, y=temp_avg, group=year)) +
+  geom_line(aes(color=year)) +
+  facet_wrap(~site,
+             ncol=1,
+             scales="free",
+             strip.position = "right")
+```
+
+```{r}
+temp_nap <- temp_avg %>% 
+  filter(site=="NAP") %>% 
+  select(year, mo, temp_avg) %>%
+  mutate(year = as.character(year),
+         year = as.integer(year)) %>% 
+  drop_na() %>% 
+  ts(start = c(2001, 2),
+     frequency = 365.24)
+
+summary(temp_nap)
+
+library(changepoint)
+
+daily.changepoints = temp_nap %>% 
+  changepoint::cpt.meanvar() 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+########################
+Coerce to a tsibble and visualize data
+########################
+```{r}
+
+temp_parsed <-temp_data %>% 
+  mutate(month = month(date, label = TRUE)) %>% 
+  mutate(year = year(date))
+
+temp_ts <- as_tsibble(temp_parsed, key = site, index = date_time)
+
+```
