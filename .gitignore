@@ -2,3 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
+
+#--------------------------------------------
+# files in gitignore
+#--------------------------------------------
+
+# sam csik adding LTER temp csv files
+bottom_temp/sam_csik/data/lter_data/*
