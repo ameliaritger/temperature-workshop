@@ -68,7 +68,7 @@ IMPORTANT NOTE: `(...col_names = TRUE, col_types = cols(.default = col_character
 ##############################
 
 # just a single site
-mohawk <- read_csv(here::here("bottom-temp", "sam_csik", "data", "mohawk_mooring_mko_20171218.csv"), col_names = TRUE, col_types = cols(.default = col_character())) %>% 
+mohawk <- read_csv(here::here("bottom-temp", "sam_csik", "data", "lter_data", "mohawk_mooring_mko_20171218.csv"), col_names = TRUE, col_types = cols(.default = col_character())) %>% 
   select(year, month, day, decimal_time, Temp_bot, Temp_top, Temp_mid) %>% 
   unite(date, year, month, day, sep = "-", remove = FALSE) %>% 
   mutate(time = times(as.numeric(decimal_time))) %>% # convert decimal time to usable format (chron)
@@ -89,7 +89,7 @@ mohawk <- read_csv(here::here("bottom-temp", "sam_csik", "data", "mohawk_mooring
 # OR write a function to import/wrangle all site files at once
 # replace every file-specific object/term/etc. with a generic version (file_name_csv, site)
 import_temp_files <- function(file_name_csv, site){
-  read_csv(here::here("bottom-temp", "sam_csik", "data", file_name_csv), col_names = TRUE, col_types = cols(.default = col_character())) %>%
+  read_csv(here::here("bottom-temp", "sam_csik", "data", "lter_data", file_name_csv), col_names = TRUE, col_types = cols(.default = col_character())) %>%
   select(year, month, day, decimal_time, Temp_bot, Temp_top, Temp_mid) %>%
   unite(date, year, month, day, sep = "-", remove = FALSE) %>%
   mutate(time = times(as.numeric(decimal_time))) %>%
@@ -139,7 +139,7 @@ for (row in 1:nrow(metadata)) {
 # You can save this combinded df as a csv file to work with in other scripts/to avoid having to run the for loop over and over again
 ##############################
 
-# write.csv(temp_data, here::here("data", "final_fig_data", "all_bottom_temps_2005_2017.csv"), row.names = FALSE)
+# write.csv(temp_data, here::here("bottom-temp", "sam_csik", "data", "lter_data", "lter_bottom_temps_2005_2017.csv"), row.names = FALSE)
 ```
 
 ####**Part 2.** Plot temperature timeseries for each site. Option to add lines to mark temperatures of interest (e.g. experimental treatments) is included (can commet out if not needed).
