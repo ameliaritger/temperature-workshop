@@ -1,0 +1,142 @@
+---
+title: "Sea Surface Temperature SBC hourly"
+author: "Emily Hardison"
+date: "7/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Goal: To search environmental temperature data for intermediate timescales of temperature change.
+
+####Plan: To create a for loop that will:
+
+1. Take an already tidy data set and filter for times of the year where daily variation is >x (user designated range)
+
+2. For all days that have that amount of vairability, calculate average of preceeding 2 weeks
+
+3. calculate average of following 1, 2, 3, 4, 5, 6, 7, 8, 9, ......n days
+
+4. if avg is >preceeding 2 weeks by Y amt, designate it as "use", if not, designate as "toss"
+
+5. filter for usable days after dates with high variability
+
+6. Generate pretty plot of the days
+
+##### Idea from Logan: Sliding Window: Plot the derivative of the data-- to pull out different levels of variability
+
+##### Idea from Krista Auto-regresive models, and thinking about the freshwater ecology candidate -- 
+
+###### From Sam -- simple packages and code to see how related different points are throughout time
+
+###### --> ESM Lab 5
+
+```{r cars, message = FALSE, echo = FALSE, warning = FALSE}
+# Attaching Packages
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(ggridges)
+```
+
+### Tidying Data
+
+```{r pressure, echo=FALSE}
+# Reading in CSV file
+sst <- read_csv(here::here("sea-surface-temp", "NOAA_buoy_SBC_hourly_abbrv.csv")) %>% 
+  clean_names() %>% # cleaning all names using Janitor
+  mutate(
+    date_time = make_datetime(year, month, day, hour)) # generating a date.time column using lubridate package
+```
+
+### Preliminary Plot of Data
+```{r, warning = FALSE, message = FALSE}
+# First pas plot to look at SST across years
+ggplot(sst, aes(x = water_temp, y = as.factor(month)))+
+  geom_density_ridges()+ # From the ggridges package
+  ylab("Year") + 
+  xlab("Temperature (°C)")+
+  theme_bw()
+
+
+```
+
+### Trying to make a for loop
+
+```{r}
+# Generate a new df and calculate the daily max amount of temp variation (daily max-min value for every day in the dataset)
+sst_variation <- sst %>% 
+  group_by(date(date_time)) %>% 
+  summarize(
+    daily_max = max(water_temp),
+    daily_min = min(water_temp),
+    daily_fluc = daily_max - daily_min
+  )
+
+# Creating Data Frame with dates where there was High Daily Variation-- >4 degrees in the day
+sst_high_var <- sst_variation %>% 
+  filter(
+    daily_fluc >= 4
+  )
+# 
+# # Need to generate For loop now....
+# 
+# d <- "1994-06-03"
+# for(row in 1:nrow(sst_high_var)){
+#   
+# # First Step: Calculating the average from the preceeding 2 weeks of data
+#   d <- `date(date_time)`
+#   
+#     previous_avg <- sst %>% 
+#     filter(date(date_time) <= date(d) & date(date_time) >= date(d) - 14) %>% 
+#     summarize(
+#       previous_average = mean(water_temp, na.rm = T)
+#     )
+#   
+# # Second Step: Determining the average of the following XX number of days
+#     post_avg <- sst %>% 
+#     filter(date(date_time) >= date(d) & date(date_time) <= date(d) + 14) %>% 
+#     group_by(date(date_time)) %>% 
+#     summarize(
+#       daily_max = max(water_temp, na.rm = T),
+#       daily_min = min(water_temp, na.rm = T),
+#       daily_fluc = daily_max - daily_min, 
+#       daily_average = mean(water_temp, na.rm = T)
+#     )
+  
+  # Binding 
+    
+    
+    ### From Sam-- you can make a blank dataframe and then rbind new dataframes to that dataframe
+    
+    ### naniar package for dealing with Missing data-- different ways to look at it and what to do
+    
+#}
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+### Parking Lot
+```{r}
+# First pas plot to look at daily variation across years
+# ggplot(sst_variation, aes(x = daily_fluc, y = as.factor(month(`date(date_time)`))))+
+#   geom_density_ridges()+ # From the ggridges package
+#   ylab("Year") + 
+#   xlab("Temperature (°C)")+
+#   xlim(0,8)+
+#   theme_bw()
+
+```
+
