@@ -48,7 +48,13 @@ library(ggridges)
 sst <- read_csv(here::here("sea-surface-temp", "NOAA_buoy_SBC_hourly_abbrv.csv")) %>% 
   clean_names() %>% # cleaning all names using Janitor
   mutate(
-    date_time = make_datetime(year, month, day, hour)) # generating a date.time column using lubridate package
+    year1 = year,
+    month1 = month,
+    day1 = day,
+    hour1 = hour,
+    date_time = make_datetime(year, month, day, hour),
+    date = make_date(year, month, day)) # generating a date.time column using lubridate package
+  
 ```
 
 ### Preliminary Plot of Data
@@ -57,8 +63,116 @@ sst <- read_csv(here::here("sea-surface-temp", "NOAA_buoy_SBC_hourly_abbrv.csv")
 ggplot(sst, aes(x = water_temp, y = as.factor(month)))+
   geom_density_ridges()+ # From the ggridges package
   ylab("Year") + 
-  xlab("Temperature (°C)")+
+  xlab("Daily Fluctations (°C)")+
   theme_bw()
+
+
+```
+
+
+
+### Making nicer plots of 1) Daily Temperature and 2) Daily Variation
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6}
+
+summary_sst <- sst %>% 
+  group_by(date) %>% 
+  summarize(
+    max_daily_temp = max(water_temp),
+    avg_daily_temp = mean(water_temp),
+    min_daily_temp = min(water_temp),
+    daily_fluctuation = max_daily_temp - min_daily_temp) %>% 
+  mutate(
+    day = case_when(
+      month(date) == 1 ~ paste(day(date)),
+      month(date) == 2 ~ paste(day(date)+31),
+      month(date) == 3 ~ paste(day(date)+59),# Not ACCOUNTING FOR LEAB YEARS :/ 
+      month(date) == 4 ~ paste(day(date)+90),#90
+      month(date) == 5 ~ paste(day(date)+120),#120
+      month(date) == 6 ~ paste(day(date)+151),#151
+      month(date) == 7 ~ paste(day(date)+181),#181
+      month(date) == 8 ~ paste(day(date)+212),#
+      month(date) == 9 ~ paste(day(date)+243),#
+      month(date) == 10 ~ paste(day(date)+273),
+      month(date) == 11 ~ paste(day(date)+304),#
+      month(date) == 12 ~ paste(day(date)+334)
+    ))
+
+
+# There is a lot of missing Data from years 1997, 2014-2018
+
+
+ggplot(summary_sst, aes(x = as.numeric(day), y = avg_daily_temp,
+                        group = year(date), 
+                        color = year(date)))+
+  geom_line()+ # yearly lines
+  ylab("Temperature (°C)") + 
+  xlab("Day")+
+  theme_bw()
+
+
+# Plot Smoothing across years (note that some years do not have full data sets and that leap years have not been accounted for -- all years usnig 365 days) 
+
+ggplot(summary_sst)+
+  geom_point(aes(x = as.numeric(day), y = avg_daily_temp), color = "black", alpha = 0.1)+
+  geom_point(aes(x = as.numeric(day), y = max_daily_temp), color = "red", alpha = 0.1)+
+  geom_point(aes(x = as.numeric(day), y = min_daily_temp), color = "blue", alpha = 0.1)+
+  geom_smooth(aes(x = as.numeric(day), y = avg_daily_temp), color = "black", size = 1.5)+ # yearly lines
+  geom_smooth(aes(x = as.numeric(day), y = max_daily_temp), color = "red", size = 1.5)+
+  geom_smooth(aes(x = as.numeric(day), y = min_daily_temp), color = "blue", size = 1.5)+
+  ylab("Temperature (°C)") + 
+  xlab("Day")+
+  scale_y_continuous(limits = c(8, 24), expand = c(0,0), breaks = c(10, 14, 18, 22))+ # Y-axis
+  geom_hline(yintercept = c(10, 14, 18, 22), linetype = "dashed", alpha = 0.5)+# adding hlines
+  theme_classic()+
+  theme(axis.text = element_text(size=12, color = "black"), 
+        axis.title.y= element_text(size=15,  color = "black"), 
+        axis.title.x= element_text(size=15), 
+        legend.position = "none", 
+        axis.line = element_line(colour = 'black', size = 0.75), 
+        plot.title = element_text(hjust = 0.5, size=20))
+
+# Plot Smoothing across years without points(note that some years do not have full data sets and that leap years have not been accounted for -- all years usnig 365 days) 
+
+ggplot(summary_sst)+
+  #geom_point(aes(x = as.numeric(day), y = avg_daily_temp), color = "black", alpha = 0.1)+
+  #geom_point(aes(x = as.numeric(day), y = max_daily_temp), color = "red", alpha = 0.1)+
+  #geom_point(aes(x = as.numeric(day), y = min_daily_temp), color = "blue", alpha = 0.1)+
+  geom_smooth(aes(x = as.numeric(day), y = avg_daily_temp), color = "black", size = 1.5)+ # yearly lines
+  geom_smooth(aes(x = as.numeric(day), y = max_daily_temp), color = "red", size = 1.5)+
+  geom_smooth(aes(x = as.numeric(day), y = min_daily_temp), color = "blue", size = 1.5)+
+  ylab("Temperature (°C)") + 
+  xlab("Day")+
+  scale_y_continuous(limits = c(8, 24), expand = c(0,0), breaks = c(12, 16, 20, 24))+ # Y-axis
+  geom_hline(yintercept = c(12, 16, 20), linetype = "dashed", alpha = 0.5)+# adding hlines
+  theme_classic()+
+  theme(axis.text = element_text(size=12, color = "black"), 
+        axis.title.y= element_text(size=15,  color = "black"), 
+        axis.title.x= element_text(size=15), 
+        legend.position = "none", 
+        axis.line = element_line(colour = 'black', size = 0.75), 
+        plot.title = element_text(hjust = 0.5, size=20))
+
+
+
+# Daily Fluctuations in temperature 
+
+ggplot(summary_sst, aes(x = as.numeric(day), y = daily_fluctuation))+
+  geom_point(aes(group = year(date), color = year(date)), alpha = 0.25)+
+  geom_smooth(color = "black")+ # yearly lines
+  ylab("Temperature (°C)") + 
+  xlab("Day")+
+  scale_y_continuous(limits = c(0, 10), expand = c(0,0), breaks = c(2, 4, 6, 8, 10))+ # Y-axis
+  #geom_hline(yintercept = c(10, 13, 16, 19), linetype = "dashed", alpha = 0.5)+# adding hlines
+  theme_classic()+
+  theme(axis.text = element_text(size=12, color = "black"), 
+        axis.title.y= element_text(size=15,  color = "black"), 
+        axis.title.x= element_text(size=15), 
+        legend.position = "none", 
+        axis.line = element_line(colour = 'black', size = 0.75), 
+        plot.title = element_text(hjust = 0.5, size=20))+
+  facet_wrap(~year(date))
+
 
 
 ```
