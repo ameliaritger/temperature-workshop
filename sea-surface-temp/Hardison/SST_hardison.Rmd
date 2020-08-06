@@ -9,9 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-###Goal: To search environmental temperature data for intermediate timescales of temperature change.
+###Original Goal: To search environmental temperature data for intermediate timescales of temperature change.
 
-####Plan: To create a for loop that will:
+####Original thoughts for a Plan of action: To create a for loop that will:
 
 1. Take an already tidy data set and filter for times of the year where daily variation is >x (user designated range)
 
@@ -33,12 +33,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ###### --> ESM Lab 5
 
+### What I actually as able to do -- actually just graph the data (mean, min, max) and then look at daily variability throughout the year (daily fluctuations in temp) to start exploring times of year with different amounts of variability
+
 ```{r cars, message = FALSE, echo = FALSE, warning = FALSE}
 # Attaching Packages
 library(tidyverse)
 library(janitor)
 library(lubridate)
 library(ggridges)
+library(naniar)
 ```
 
 ### Tidying Data
@@ -73,15 +76,15 @@ ggplot(sst, aes(x = water_temp, y = as.factor(month)))+
 
 ### Making nicer plots of 1) Daily Temperature and 2) Daily Variation
 
-```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6}
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6, fig.align='center'}
 
 summary_sst <- sst %>% 
   group_by(date) %>% 
   summarize(
-    max_daily_temp = max(water_temp),
-    avg_daily_temp = mean(water_temp),
-    min_daily_temp = min(water_temp),
-    daily_fluctuation = max_daily_temp - min_daily_temp) %>% 
+    max_daily_temp = max(water_temp, na.rm =T),
+    avg_daily_temp = mean(water_temp, na.rm =T),
+    min_daily_temp = min(water_temp, na.rm =T),
+    daily_fluctuation = max_daily_temp - min_daily_temp, na.rm =T) %>% 
   mutate(
     day = case_when(
       month(date) == 1 ~ paste(day(date)),
@@ -96,7 +99,15 @@ summary_sst <- sst %>%
       month(date) == 10 ~ paste(day(date)+273),
       month(date) == 11 ~ paste(day(date)+304),#
       month(date) == 12 ~ paste(day(date)+334)
-    ))
+    )) %>% 
+  filter(
+    max_daily_temp !="-Inf", # removing NA Values
+    max_daily_temp !="Inf",
+    min_daily_temp !="-Inf",
+    max_daily_temp !="Inf",
+    avg_daily_temp !="-Inf",
+    avg_daily_temp !="Inf"
+  )
 
 
 # There is a lot of missing Data from years 1997, 2014-2018
@@ -114,12 +125,12 @@ ggplot(summary_sst, aes(x = as.numeric(day), y = avg_daily_temp,
 # Plot Smoothing across years (note that some years do not have full data sets and that leap years have not been accounted for -- all years usnig 365 days) 
 
 ggplot(summary_sst)+
-  geom_point(aes(x = as.numeric(day), y = avg_daily_temp), color = "black", alpha = 0.1)+
-  geom_point(aes(x = as.numeric(day), y = max_daily_temp), color = "red", alpha = 0.1)+
-  geom_point(aes(x = as.numeric(day), y = min_daily_temp), color = "blue", alpha = 0.1)+
-  geom_smooth(aes(x = as.numeric(day), y = avg_daily_temp), color = "black", size = 1.5)+ # yearly lines
-  geom_smooth(aes(x = as.numeric(day), y = max_daily_temp), color = "red", size = 1.5)+
-  geom_smooth(aes(x = as.numeric(day), y = min_daily_temp), color = "blue", size = 1.5)+
+  geom_point(aes(x = as.numeric(day), y = avg_daily_temp, na.rm =T), color = "black", alpha = 0.05)+
+  geom_point(aes(x = as.numeric(day), y = max_daily_temp, na.rm =T), color = "red", alpha = 0.05)+
+  geom_point(aes(x = as.numeric(day), y = min_daily_temp, na.rm =T), color = "blue", alpha = 0.05)+
+  geom_smooth(aes(x = as.numeric(day), y = avg_daily_temp, na.rm =T), color = "black", size = 1.5)+ # yearly lines
+  geom_smooth(aes(x = as.numeric(day), y = max_daily_temp, na.rm =T), color = "red", size = 1.5)+
+  geom_smooth(aes(x = as.numeric(day), y = min_daily_temp, na.rm =T), color = "blue", size = 1.5)+
   ylab("Temperature (°C)") + 
   xlab("Day")+
   scale_y_continuous(limits = c(8, 24), expand = c(0,0), breaks = c(10, 14, 18, 22))+ # Y-axis
@@ -165,7 +176,8 @@ ggplot(summary_sst, aes(x = as.numeric(day), y = daily_fluctuation))+
   scale_y_continuous(limits = c(0, 10), expand = c(0,0), breaks = c(2, 4, 6, 8, 10))+ # Y-axis
   #geom_hline(yintercept = c(10, 13, 16, 19), linetype = "dashed", alpha = 0.5)+# adding hlines
   theme_classic()+
-  theme(axis.text = element_text(size=12, color = "black"), 
+  theme(axis.text.y = element_text(size=12, color = "black"), 
+        axis.text.x = element_blank(), 
         axis.title.y= element_text(size=15,  color = "black"), 
         axis.title.x= element_text(size=15), 
         legend.position = "none", 
@@ -177,9 +189,90 @@ ggplot(summary_sst, aes(x = as.numeric(day), y = daily_fluctuation))+
 
 ```
 
-### Trying to make a for loop
 
-```{r}
+
+
+### How to deal with missing data? Want to discuss this more in the group. Sam had sent around this resource from Allison Horst:
+https://allisonhorst.shinyapps.io/missingexplorer/#section-introduction
+
+There are quite a lot of missing years in the data set. The naniar package can tell me the proportion of missing data relative to the entire data set
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6, fig.align='center'}
+miss_var_summary(sst) # naniar function that tells you the proportion of missing data for each variable
+```
+
+
+There is a lot of missing data for entire years, and I am not sure how to deal with this, especially since most of the missing data is in the more recent years.
+
+Questions for group:
+1) How to graph variability? Do you like the idea of doing max daily var across the year?
+2) What to do when the recent data is missing? I.e. if you had an experiment in 2020, but there are large holes in the data after 2016? 
+
+To make a daily variability plot, I will just take the latest full year of data (2016) and make a nicer version of that plot
+
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6, fig.align='center'}
+
+
+summary_sst_2016 <- summary_sst %>% 
+  filter(year(date) == 2017)
+
+# Daily Fluctuations in temperature 
+
+ggplot(summary_sst_2016, aes(x = as.numeric(day), y = daily_fluctuation))+
+  geom_point()+
+  geom_smooth(color = "black")+ # yearly lines
+  ylab("Temperature (°C)") + 
+  xlab("Day")+
+  scale_y_continuous(limits = c(0, 10), expand = c(0,0), breaks = c(2, 4, 6, 8, 10))+ # Y-axis
+  #geom_hline(yintercept = c(10, 13, 16, 19), linetype = "dashed", alpha = 0.5)+# adding hlines
+  theme_classic()+
+  theme(axis.text = element_text(size=12, color = "black"), 
+        axis.title.y= element_text(size=15,  color = "black"), 
+        axis.title.x= element_text(size=15), 
+        legend.position = "none", 
+        axis.line = element_line(colour = 'black', size = 0.75), 
+        plot.title = element_text(hjust = 0.5, size=20))
+
+```
+
+
+I'm interested in how variability from 1994-1996 compares to 2015-2017. Going to filter the data for a few years early in the data set to visualize how to "smoothed" data compare to the more recent years. Not feeling super confident in this approach, but thought it could be cool to look at.
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6, fig.align='center'}
+summary_sst_compare<- summary_sst %>% 
+  filter(year(date) %in% c(1994, 1995, 1996, 2015, 2016, 2017)) %>% 
+  mutate(time = case_when(
+    year(date) %in% c(1994, 1995, 1996) ~ "90's",
+    year(date) %in% c(2015, 2016, 2017) ~ "recent"))
+
+ggplot(summary_sst_compare, aes(x = as.numeric(day), y = daily_fluctuation, color = time, group = year(date)))+
+  #geom_point()+
+  geom_smooth(alpha = 0.1)+ # yearly lines
+  labs(y = "Temperature (°C)",
+       x="Day",
+       color = "")+
+  scale_y_continuous(limits = c(0, 8), expand = c(0,0), breaks = c(2, 4, 6, 8))+ # Y-axis
+  #geom_hline(yintercept = c(10, 13, 16, 19), linetype = "dashed", alpha = 0.5)+# adding hlines
+  theme_classic()+
+  scale_color_manual(values = c("blue", "orange"))+
+  theme(axis.text = element_text(size=12, color = "black"), 
+        axis.title.y= element_text(size=15,  color = "black"), 
+        axis.title.x= element_text(size=15), 
+        legend.position = "bottom", 
+        axis.line = element_line(colour = 'black', size = 0.75), 
+        plot.title = element_text(hjust = 0.5, size=20))
+
+```
+
+
+
+
+
+
+### Trying to make a for loop (and failing)
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6, fig.align='center'}
 # Generate a new df and calculate the daily max amount of temp variation (daily max-min value for every day in the dataset)
 sst_variation <- sst %>% 
   group_by(date(date_time)) %>% 
@@ -239,11 +332,8 @@ sst_high_var <- sst_variation %>%
 
 
 
-
-
-
 ### Parking Lot
-```{r}
+```{r, message = FALSE, echo = FALSE, warning = FALSE, fig.width=6, fig.height=6, fig.align='center'}
 # First pas plot to look at daily variation across years
 # ggplot(sst_variation, aes(x = daily_fluc, y = as.factor(month(`date(date_time)`))))+
 #   geom_density_ridges()+ # From the ggridges package
