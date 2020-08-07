@@ -226,7 +226,7 @@ nap_ts_prep <- cleaned_temp_data %>%
 
 #coerce to ts df
 nap_ts = ts(data = nap_ts_prep$temp, 
-                    start = c(1997,1), 
+                    start = c(1999,1), 
                     frequency = 365.24)
 
 #summarize
@@ -268,7 +268,75 @@ Let's plot the breakpoint
 daily.changepoints %>% 
   changepoint::plot(xlab = "", ylab = expression(Temperature~(degree*C)), las = 1)
 ```
-Looks like 2009 was the year the change point occurred.
+Looks like 2010 was the year the change point occurred *for days*.
+```{r}
+#isolate the exact date for changepoint
+#create monthly data set vector from January 1999 to December 2017
+analysis.day = seq(dmy(010199), dmy(311217), by = "day")
+analysis.day[cpts(daily.changepoints)]
+```
+December 18, 2012 to be exact
+
+Now, do the same for months (and years)
+Month:
+```{r}
+nap_ts_mo_prep <- cleaned_temp_data %>% 
+  group_by(site, year, month) %>% 
+  summarize(temp = mean(Temp_bot)) %>% #get average temperature for each date
+  ungroup() %>%
+  arrange(year, month) %>% 
+  filter(site=="NAP") %>% 
+  drop_na() #drop NA values
+
+#coerce to ts df
+nap_ts_mo = ts(data = nap_ts_mo_prep$temp, 
+                    start = c(1999,1), 
+                    frequency = 12)
+
+#summarize
+summary(nap_ts_mo)
+
+#visualize
+nap_ts_mo %>% plot(xlab = "", las = 1,
+                  ylab = expression(Temperature~(degree*C)))
+```
+
+```{r}
+#ID breakpoints
+daily.changepoints_mo = nap_ts_mo %>% 
+  changepoint::cpt.meanvar()
+
+daily.changepoints_mo %>% summary()
+
+daily.changepoints_mo %>% 
+  param.est() %>% 
+  data.frame() %>% 
+  mutate(segment = c("First", "Second")) %>% select(segment, mean, variance) %>%
+  kableExtra::kable(format = "html", digits = 2, 
+                    caption = "Mean and variance of change point for daily sst",
+                    col.names = c("Segment", "Mean", "Variance")) %>%
+  kableExtra::column_spec(column = 1:3, width = "3cm") %>%
+  kableExtra::add_header_above(c("", "Parameters" = 2))
+```
+Two segments, first has lower mean temperature than the second
+
+```{r}
+#plot the breakpoint
+daily.changepoints_mo %>% 
+  changepoint::plot(xlab = "", ylab = expression(Temperature~(degree*C)), las = 1)
+#notice that change point is not noticeable, so run it again using a nonparametric function
+
+library(changepoint.np)
+daily.changepoints_mo_np = nap_ts_mo %>% changepoint.np::cpt.np() 
+
+daily.changepoints_mo_np %>% changepoint::plot()
+
+#isolate the exact dates for changepoints
+#create monthly data set vector from January 1999 to December 2009
+analysis.month = seq(dmy(010199), dmy(311209), by = "month")
+analysis.month[cpts(daily.changepoints_mo_np)]
+```
+Change occurred April 2005 and again on November 2006... anything odd about those dates?
 
 Make a Naples heatmap
 ```{r}
@@ -298,4 +366,3 @@ imagep(x = years, y = days, z = nap_matrix %>%
        col = oceColors9A(120),
        zlab = expression(Naples-Temperature~(degree *C)))
 ```
-I guess 2009 looks like more cold, not a lot of warm temps? (re: changepoint)
