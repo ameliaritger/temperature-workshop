@@ -192,6 +192,10 @@ for(i in 1:length(unique_sites)) {
 }
 ```
 
+##################################
+Amelia's work
+##################################
+
 #Get average temperature for each date
 ```{r}
 temp_avg <- temp_data %>% 
@@ -202,11 +206,14 @@ temp_avg <- temp_data %>%
   summarize(temp_avg = mean(Temp_bot)) %>% 
   ungroup()
 
+#plot average temperature for each month for each site
 ggplot(data=temp_avg, aes(x=date, y=temp_avg, color=site)) +
   geom_line() +
   facet_wrap(~site)
 
+ggsave(here("bottom-temp", "amelia", "fig1.png"), height=5, width=8)
 
+#season plot
 ggplot(data=temp_avg, aes(x=mo, y=temp_avg, group=year)) +
   geom_line(aes(color=year)) +
   facet_wrap(~site,
@@ -239,6 +246,7 @@ nap_ts %>% plot(xlab = "", las = 1,
                   ylab = expression(Temperature~(degree*C)))
 ```
 
+From  https://semba-blog.netlify.app/02/22/2019/exploring-time-series-data-in-r/#tab:tab4
 ID shifts in mean/variance at Naples
 ```{r}
 library(changepoint)
@@ -248,6 +256,7 @@ daily.changepoints = nap_ts %>%
 
 daily.changepoints %>% summary()
 ```
+
 There are two segments with one change point. 
 
 ```{r}
@@ -263,6 +272,7 @@ daily.changepoints %>%
   kableExtra::column_spec(column = 1:3, width = "3cm") %>%
   kableExtra::add_header_above(c("", "Parameters" = 2))
 ```
+
 The first segment had a lower mean bottom temperature and lower variance in bottom temperature.
 
 Let's plot the breakpoint
@@ -270,14 +280,17 @@ Let's plot the breakpoint
 daily.changepoints %>% 
   changepoint::plot(xlab = "", ylab = expression(Temperature~(degree*C)), las = 1)
 ```
+
 Looks like 2010 was the year the change point occurred *for days*.
+
 ```{r}
 #isolate the exact date for changepoint
 #create monthly data set vector from January 1999 to December 2017
 analysis.day = seq(dmy(010199), dmy(311217), by = "day")
 analysis.day[cpts(daily.changepoints)]
 ```
-December 18, 2012 to be exact
+
+December 18, 2010 to be exact
 
 Now, do the same for months (and years)
 Month:
@@ -320,6 +333,7 @@ daily.changepoints_mo %>%
   kableExtra::column_spec(column = 1:3, width = "3cm") %>%
   kableExtra::add_header_above(c("", "Parameters" = 2))
 ```
+
 Two segments, first has lower mean temperature than the second
 
 ```{r}
@@ -338,6 +352,7 @@ daily.changepoints_mo_np %>% changepoint::plot()
 analysis.month = seq(dmy(010199), dmy(311209), by = "month")
 analysis.month[cpts(daily.changepoints_mo_np)]
 ```
+
 Change occurred April 2005 and again on November 2006... anything odd about those dates?
 
 Make a Naples heatmap
@@ -368,3 +383,13 @@ imagep(x = years, y = days, z = nap_matrix %>%
        col = oceColors9A(120),
        zlab = expression(Naples-Temperature~(degree *C)))
 ```
+
+More resources:
+Change point detection
+https://rpubs.com/richkt/269908
+
+To do: 
+- figure out if ts conversion deletes or fills in missing data
+- breakpoint analysis for years
+- use coefficient of variation to calculate cycle for each site to answer "what is an average day at [site]?"
+- compare models and anomalies at each site to assess differences between sites
